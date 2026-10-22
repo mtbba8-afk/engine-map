@@ -16,7 +16,7 @@ cd engine-map
 python3 -m http.server 8000
 ```
 
-Open http://localhost:8000. Drag to orbit, scroll to zoom. (Opening `index.html` directly won't work, because browsers block reading the JSON from a `file://` page.)
+Open http://localhost:8000. Or see the sample live: https://mtbba8-afk.github.io/engine-map/ Drag to orbit, scroll to zoom. (Opening `index.html` directly won't work, because browsers block reading the JSON from a `file://` page.)
 
 No build step, no dependencies. One HTML file and three.js from a CDN.
 
