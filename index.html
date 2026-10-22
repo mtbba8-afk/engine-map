@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Engine Map</title>
+<style>
+  :root { --bg:#0E0F12; --ink:#ECEAE4; --dim:#8A8A86; --live:#9BB07A; --pending:#C9803A; --missing:#B5524A; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; overflow:hidden; }
+  #hud { position:fixed; top:16px; left:16px; z-index:2; pointer-events:none; }
+  #hud h1 { margin:0; font-size:18px; letter-spacing:.08em; }
+  #hud p { margin:4px 0 0; color:var(--dim); font-size:12px; }
+  #legend { position:fixed; bottom:16px; left:16px; z-index:2; display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--dim); }
+  #legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px; }
+  .label { color:var(--ink); text-align:center; white-space:nowrap; text-shadow:0 1px 3px #000; pointer-events:none; }
+  .label b { display:block; font-size:12px; font-weight:600; }
+  .label span { display:block; font-size:10px; color:#B9B7B0; }
+  .label em { display:block; font-style:normal; font-size:10px; color:var(--live); }
+  .lane { font-size:11px; letter-spacing:.14em; font-weight:700; opacity:.85; }
+  .col { font-size:10px; letter-spacing:.1em; color:var(--dim); text-transform:uppercase; }
+  #err { position:fixed; top:16px; right:16px; z-index:2; color:var(--missing); font-size:12px; max-width:320px; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="hud"><h1>ENGINE MAP</h1><p id="stamp">loading engine-map.json…</p></div>
+<div id="legend">
+  <span><i style="background:var(--live)"></i>live</span>
+  <span><i style="background:var(--pending)"></i>pending</span>
+  <span><i style="background:var(--missing)"></i>missing</span>
+  <span>beam = runs on its own · solid = a person does it · dashed = not built yet</span>
+</div>
+<div id="err"></div>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
+
+const FILE = new URLSearchParams(location.search).get("file") || "engine-map.json";
+const STATUS = { live: 0x9BB07A, pending: 0xC9803A, missing: 0xB5524A, locked: 0x55565A };
+const COL_W = 9, ROW_H = 4.6, LANE_GAP = 3.2;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x0E0F12, 60, 140);
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 500);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.setClearColor(0x0E0F12);
+document.body.appendChild(renderer.domElement);
+const labels = new CSS2DRenderer();
+labels.setSize(innerWidth, innerHeight);
+Object.assign(labels.domElement.style, { position: "fixed", top: "0", pointerEvents: "none" });
+document.body.appendChild(labels.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.35;
+renderer.domElement.addEventListener("pointerdown", () => (controls.autoRotate = false));
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const sun = new THREE.DirectionalLight(0xffffff, 1.1);
+sun.position.set(20, 40, 25);
+scene.add(sun);
+
+let world = new THREE.Group(), beams = [], lastText = "";
+scene.add(world);
+
+function label(html, cls, pos) {
+  const el = document.createElement("div");
+  el.className = cls;
+  el.innerHTML = html;
+  const o = new CSS2DObject(el);
+  o.position.copy(pos);
+  return o;
+}
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function build(map) {
+  scene.remove(world);
+  world.traverse(o => { o.geometry?.dispose(); o.material?.dispose?.(); if (o.isCSS2DObject) o.element.remove(); });
+  world = new THREE.Group();
+  beams = [];
+
+  const cols = map.columns || [];
+  const width = Math.max(cols.length - 1, 1) * COL_W;
+  const pos = {};
+  let z = 0;
+
+  // Each lane is a glass layer; its rows stack front to back.
+  for (const lane of map.lanes) {
+    const nodes = map.nodes.filter(n => n.lane === lane.key);
+    const rows = Math.max(1, ...nodes.map(n => Math.ceil((n.row ?? 0) + 1)));
+    const depth = rows * ROW_H;
+    const color = new THREE.Color(lane.col || "#8FCBDE");
+    const plate = new THREE.Mesh(
+      new THREE.BoxGeometry(width + COL_W, 0.15, depth),
+      new THREE.MeshPhysicalMaterial({ color, transparent: true, opacity: 0.12, roughness: 0.2, transmission: 0.4 })
+    );
+    plate.position.set(width / 2, 0, z + depth / 2 - ROW_H / 2);
+    world.add(plate);
+    world.add(label(esc(lane.label), "lane", new THREE.Vector3(-COL_W * 0.6, 0.3, z + depth / 2 - ROW_H / 2)));
+    world.children.at(-1).element.style.color = lane.col || "";
+
+    for (const n of nodes) {
+      const p = new THREE.Vector3((n.col ?? 0) * COL_W, 0.9, z + (n.row ?? 0) * ROW_H);
+      pos[n.id] = p;
+      const mat = new THREE.MeshStandardMaterial({
+        color: STATUS[n.status] ?? STATUS.locked, roughness: 0.45, metalness: 0.1,
+        transparent: n.status === "missing", opacity: n.status === "missing" ? 0.35 : 1,
+        wireframe: n.status === "missing",
+      });
+      const block = new THREE.Mesh(new THREE.BoxGeometry(5.2 * (n.span || 1), 1.4, 1.8), mat);
+      block.position.copy(p);
+      world.add(block);
+      const num = n.num ? `<em>${esc(n.num)}${n.numDate ? " · " + esc(n.numDate) : ""}</em>` : "";
+      world.add(label(`<b>${esc(n.title)}</b><span>${esc(n.sub)}</span>${num}`, "label", p.clone().add(new THREE.Vector3(0, 2.3, 0))));
+    }
+    z += depth + LANE_GAP;
+  }
+
+  cols.forEach((c, i) => world.add(label(esc(c), "col", new THREE.Vector3(i * COL_W, 0.2, -ROW_H * 1.6))));
+
+  // Edges: arcs between blocks. auto = solid + travelling beam, manual = solid, pending = dashed.
+  for (const [from, to, kind = "manual"] of map.edges) {
+    const a = pos[from], b = pos[to];
+    if (!a || !b) continue;
+    const mid = a.clone().lerp(b, 0.5).add(new THREE.Vector3(0, 1.6 + a.distanceTo(b) * 0.08, 0));
+    const curve = new THREE.QuadraticBezierCurve3(a.clone().setY(1.7), mid, b.clone().setY(1.7));
+    const geo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(48));
+    const line = kind === "pending"
+      ? new THREE.Line(geo, new THREE.LineDashedMaterial({ color: 0x8A8A86, dashSize: 0.4, gapSize: 0.3 }))
+      : new THREE.Line(geo, new THREE.LineBasicMaterial({ color: kind === "auto" ? 0x8FCBDE : 0xECEAE4, transparent: true, opacity: kind === "auto" ? 0.9 : 0.45 }));
+    if (kind === "pending") line.computeLineDistances();
+    world.add(line);
+    if (kind === "auto") {
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), new THREE.MeshBasicMaterial({ color: 0xBFE6F2 }));
+      world.add(dot);
+      beams.push({ curve, dot, t: Math.random() });
+    }
+  }
+
+  world.position.set(-width / 2, 0, -z / 2);
+  scene.add(world);
+  if (!camera.userData.placed) {
+    camera.position.set(0, Math.max(width, z) * 0.85, Math.max(width, z) * 1.15);
+    controls.target.set(0, 0, 0);
+    camera.userData.placed = true;
+  }
+  document.getElementById("stamp").textContent =
+    `${map.nodes.length} blocks · ${map.edges.length} connections · updated ${map.updated || "—"}`;
+}
+
+// Redraw whenever the file changes. Claude Code edits the JSON; this page notices within 2 seconds.
+async function poll() {
+  try {
+    const text = await (await fetch(`${FILE}?t=${Date.now()}`, { cache: "no-store" })).text();
+    if (text !== lastText) { build(JSON.parse(text)); lastText = text; }
+    document.getElementById("err").textContent = "";
+  } catch (e) {
+    document.getElementById("err").textContent = `Can't read ${FILE}: ${e.message}. Serve this folder (see README), don't open the file directly.`;
+  }
+}
+poll();
+setInterval(poll, 2000);
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = clock.getDelta();
+  for (const b of beams) { b.t = (b.t + dt * 0.35) % 1; b.dot.position.copy(b.curve.getPoint(b.t)); }
+  controls.update();
+  renderer.render(scene, camera);
+  labels.render(scene, camera);
+});
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  labels.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>

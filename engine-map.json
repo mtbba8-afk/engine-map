@@ -1,0 +1,264 @@
+{
+ "_about": "One file that describes your whole business. Claude Code edits this file; index.html redraws it. status: live | pending | missing. edge kind: auto (runs on its own, a beam travels it) | manual (a person does it) | pending. num = a measured number, always with numDate. Every name and number in this file is sample data. Replace it with yours.",
+ "updated": "2026-10-22 12:00",
+ "columns": [
+  "Where work comes from",
+  "The machine",
+  "Your yes",
+  "Where it goes",
+  "Pays off in"
+ ],
+ "lanes": [
+  {
+   "key": "sales",
+   "label": "SALES",
+   "col": "#C9803A"
+  },
+  {
+   "key": "content",
+   "label": "CONTENT",
+   "col": "#8FCBDE"
+  },
+  {
+   "key": "ops",
+   "label": "BACK OFFICE",
+   "col": "#9BB07A"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "form",
+   "lane": "sales",
+   "col": 0,
+   "row": 0,
+   "title": "Web form",
+   "sub": "new enquiries",
+   "status": "live"
+  },
+  {
+   "id": "calls",
+   "lane": "sales",
+   "col": 0,
+   "row": 1,
+   "title": "Missed calls",
+   "sub": "after hours",
+   "status": "pending"
+  },
+  {
+   "id": "draft",
+   "lane": "sales",
+   "col": 1,
+   "row": 0.5,
+   "title": "Claude drafts reply",
+   "sub": "within minutes",
+   "status": "live"
+  },
+  {
+   "id": "yes_s",
+   "lane": "sales",
+   "col": 2,
+   "row": 0.5,
+   "title": "Approval inbox",
+   "sub": "you say yes",
+   "status": "live"
+  },
+  {
+   "id": "email",
+   "lane": "sales",
+   "col": 3,
+   "row": 0.5,
+   "title": "Email",
+   "sub": "sent from your inbox",
+   "status": "live"
+  },
+  {
+   "id": "booked",
+   "lane": "sales",
+   "col": 4,
+   "row": 0.5,
+   "title": "Booked call",
+   "sub": "on your calendar",
+   "status": "live",
+   "num": "4 this week (sample)",
+   "numDate": "2026-10-22"
+  },
+  {
+   "id": "notes",
+   "lane": "content",
+   "col": 0,
+   "row": 0,
+   "title": "Weekly notes",
+   "sub": "what you built",
+   "status": "live"
+  },
+  {
+   "id": "writer",
+   "lane": "content",
+   "col": 1,
+   "row": 0,
+   "title": "Claude writes posts",
+   "sub": "in your voice",
+   "status": "live"
+  },
+  {
+   "id": "yes_c",
+   "lane": "content",
+   "col": 2,
+   "row": 0,
+   "title": "Approval inbox",
+   "sub": "you edit, then yes",
+   "status": "live"
+  },
+  {
+   "id": "li",
+   "lane": "content",
+   "col": 3,
+   "row": 0,
+   "title": "LinkedIn",
+   "sub": "scheduled",
+   "status": "live",
+   "num": "3 scheduled (sample)",
+   "numDate": "2026-10-22"
+  },
+  {
+   "id": "ig",
+   "lane": "content",
+   "col": 3,
+   "row": 1,
+   "title": "Instagram",
+   "sub": "not set up",
+   "status": "missing"
+  },
+  {
+   "id": "aud",
+   "lane": "content",
+   "col": 4,
+   "row": 0.5,
+   "title": "Audience",
+   "sub": "people who know you",
+   "status": "live"
+  },
+  {
+   "id": "jobs",
+   "lane": "ops",
+   "col": 0,
+   "row": 0,
+   "title": "Finished jobs",
+   "sub": "from your job tool",
+   "status": "live"
+  },
+  {
+   "id": "inv",
+   "lane": "ops",
+   "col": 1,
+   "row": 0,
+   "title": "Invoice drafts",
+   "sub": "same day",
+   "status": "pending"
+  },
+  {
+   "id": "yes_o",
+   "lane": "ops",
+   "col": 2,
+   "row": 0,
+   "title": "You approve",
+   "sub": "nothing moves money alone",
+   "status": "live"
+  },
+  {
+   "id": "books",
+   "lane": "ops",
+   "col": 3,
+   "row": 0,
+   "title": "Accounting",
+   "sub": "invoice sent + reminders",
+   "status": "pending"
+  },
+  {
+   "id": "paid",
+   "lane": "ops",
+   "col": 4,
+   "row": 0,
+   "title": "Paid",
+   "sub": "cash in",
+   "status": "pending"
+  }
+ ],
+ "edges": [
+  [
+   "form",
+   "draft",
+   "auto"
+  ],
+  [
+   "calls",
+   "draft",
+   "pending"
+  ],
+  [
+   "draft",
+   "yes_s",
+   "auto"
+  ],
+  [
+   "yes_s",
+   "email",
+   "manual"
+  ],
+  [
+   "email",
+   "booked",
+   "manual"
+  ],
+  [
+   "notes",
+   "writer",
+   "auto"
+  ],
+  [
+   "writer",
+   "yes_c",
+   "auto"
+  ],
+  [
+   "yes_c",
+   "li",
+   "manual"
+  ],
+  [
+   "yes_c",
+   "ig",
+   "pending"
+  ],
+  [
+   "li",
+   "aud",
+   "auto"
+  ],
+  [
+   "jobs",
+   "inv",
+   "pending"
+  ],
+  [
+   "inv",
+   "yes_o",
+   "pending"
+  ],
+  [
+   "yes_o",
+   "books",
+   "manual"
+  ],
+  [
+   "books",
+   "paid",
+   "pending"
+  ],
+  [
+   "booked",
+   "jobs",
+   "manual"
+  ]
+ ]
+}
